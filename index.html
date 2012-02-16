@@ -1,0 +1,30 @@
+<html>
+  <head>
+    <title>Simple game with Raphael JS</title>
+	<meta name="viewport" content="width=device-width; initial-scale=1.0; maximum-scale=1.0; user-scalable=0;" />
+	<meta name="apple-mobile-web-app-capable" content="yes" />
+	<meta names="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+	
+	<style>
+		#c {
+			background-color: #ff0000;
+		}
+		html, body { 
+			border-width: 0px; 
+			margin-top:-0px;
+			margin-left:-0px;
+		 }
+	</style>
+</head>
+<body>
+    <div id="c" style="width:320px;height:362px" ></div>
+	<script src="raphael-min.1.5.2.js"></script>
+	<script src="game.js"></script>
+	<script>
+	// Catch touchevents on dont_scroll-objects
+	document.getElementById("c").ontouchmove = function(event) {
+	   event.preventDefault();
+	}
+	</script>
+</body>
+</html>
