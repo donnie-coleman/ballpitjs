@@ -123,9 +123,6 @@ var MoveBalls = function(){
 	 //tmpBall.vx = tmpBall.ball.vx;
 	 //tmpBall.vy = tmpBall.ball.vy;	 
 	 if(!tmpBall.ball.dragging){
-		tmpBall.x += tmpBall.vx;
-		tmpBall.y += tmpBall.vy;	 
-	    
 		if(tmpBall.radius > tmpBall.oradius){
 			var radius = tmpBall.ball.attr("r"); 
 	 		radius *= .95;
@@ -138,9 +135,13 @@ var MoveBalls = function(){
 		else if(tmpBall.ball.deflated){
 			tmpBall.ball.attr({fill: unselectedColor});
 		}
-		//alert(tmpBall.toSource());
-		tmpBall.ball.translate(tmpBall.vx,tmpBall.vy);
+
 		checkWalls(tmpBall);
+
+		tmpBall.x += tmpBall.vx;
+		tmpBall.y += tmpBall.vy;
+
+		tmpBall.ball.attr({cx:tmpBall.x, cy:tmpBall.y});
 	 }
 	 else{
 		 tmpBall.x = tmpBall.ball.attr("cx");
@@ -178,9 +179,6 @@ var checkWalls = function(ball){
 		ball.y = ball.radius;
 		ball.vy *= -1;
 	}
-	
-	ball.ball.attr({cx:ball.x});
-	ball.ball.attr({cy:ball.y});
 };
 
 var detectCollisions = function (){
@@ -289,7 +287,7 @@ var checkCollision = function (ball0, ball1){
 		ball0.vy = vel0F[1];
 		ball1.vx = vel1F[0];
 		ball1.vy = vel1F[1];
-		
+
 		if(currentBall){	
 			if(ball1.ball.id == currentBall.id){
 				log("My Current Ball Touched Something!",currentBall);
@@ -322,6 +320,7 @@ var checkCollision = function (ball0, ball1){
 				return false; //this is to stop processing in onEnterFrame if this round is over
 		}
 	}
+
 	return true;
 };
 
