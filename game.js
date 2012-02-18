@@ -73,9 +73,7 @@ var makeBalls = function(color,isDraggable,numberOfBalls,radiusMin,radiusMax,isS
 	  var vx = isSpeedRandom?(Math.random() * speedX - (speedX/2)):speedX;
 	  var vy = isSpeedRandom?(Math.random() * speedY - (speedY/2)):speedY;
 
-	  var c = paper.set();
-	c.push(paper.circle(cx, cy, r).attr({fill: color, stroke:"none"}));
-	c.push(paper.text(width/2,height/4+25,text).attr({"font-size":"20px"}));
+	  var c = paper.circle(cx, cy, r).attr({fill: color, stroke:"none"});
 	 
 	  c.draggable = isDraggable;
 	  if(isDraggable){
