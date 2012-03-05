@@ -14,7 +14,7 @@ var fps = 1000 / 30,
 	taintedColor = '#00ff00',
 	obstacleColor = '#000000',
 	hitColor = '#ffffff',
-	newColor = '#ffffff',
+	newColor = '#ff0000',
 	powerColor = '#0000ff',	
 	unselectedTextColor = '#000000',
 	paper = Raphael(c,width,height),
@@ -23,13 +23,13 @@ var fps = 1000 / 30,
 	x = 0,
 	y = 0;
 	
-var howManyBalls = 4;
-var liveBalls = howManyBalls;
-var howManyEnemies = 2;
-var badBalls = howManyEnemies;
-var howManyNewBalls = 0;
+var initLiveBalls = 4;
+var liveBalls = initLiveBalls;
+var initEnemyBalls = 2;
+var enemyBalls = initEnemyBalls;
+var newBalls = 0;
 
-var totalBalls = function(){ return howManyBalls + howManyEnemies + howManyNewBalls };
+var totalBalls = function(){ return initLiveBalls + initEnemyBalls + newBalls };
 var ballset = paper.set();
 var balls = [];
 
@@ -50,14 +50,14 @@ var myDown = function(){
 		this.ox = this.attr("cx");
 	    this.oy = this.attr("cy");
 	    this.dragging = true;
-		this.attr({fill: selectedColor});
+		this.attr({fill: "r(0.65, 0.35)#fff-"+selectedColor});
 		currentBall = this;
 	}
 };
 
 var myUp = function(){
 	if(!this.deflating && this.dragging){
-		this.attr({fill: selectedColor});
+		this.attr({fill: "r(0.65, 0.35)#fff-"+selectedColor});
 		this.deflating = true;	
 		this.released = true;
 		this.dragging = false;
@@ -65,25 +65,24 @@ var myUp = function(){
 	}
 };
 
-var makeBalls = function(color,isDraggable,numberOfBalls,radiusMin,radiusMax,isSpeedRandom,speedX,speedY,isCoordsRandom,initX,initY,text,textColor){
-	for (var i = 0; i < numberOfBalls; i++){
-	  var r = (Math.random()*radiusMax)+radiusMin;
-	  var cx = isCoordsRandom?Math.random()*width:initX;
-	  var cy = isCoordsRandom?Math.random()*height:initY;
-	  var vx = isSpeedRandom?(Math.random() * speedX - (speedX/2)):speedX;
-	  var vy = isSpeedRandom?(Math.random() * speedY - (speedY/2)):speedY;
+var makeBall = function(quantity, config){
+	for (var i = 0; i < quantity; i++){
+	  var r = (Math.random()*config.radiusMax)+config.radiusMin;
+	  var cx = config.isCoordsRandom?Math.random()*width:config.initX;
+	  var cy = config.isCoordsRandom?Math.random()*height:config.initY;
+	  var vx = config.isSpeedRandom?(Math.random() * config.speedX - (config.speedX/2)):config.speedX;
+	  var vy = config.isSpeedRandom?(Math.random() * config.speedY - (config.speedY/2)):config.speedY;
 
-	  var c = paper.circle(cx, cy, r).attr({fill: color, stroke:"none"});
+	  var c = paper.circle(cx, cy, r).attr({fill: "r(0.65, 0.35)#fff-"+config.color});
 	 
-	  c.draggable = isDraggable;
-	  if(isDraggable){
+	  c.draggable = config.isDraggable?true:false;
+	  if(c.draggable){
 		c.released = false;
 		c.dragging = false;
-		c.draggable = isDraggable;
-	  	c.drag(myMove, myDown, myUp);
+		c.drag(myMove, myDown, myUp);
 	  }
 	  
-	  balls.push({color:color,
+	  balls.push({color:config.color,
 				 radius:r,
 				 oradius:r,
 				 vx:vx,
@@ -91,17 +90,63 @@ var makeBalls = function(color,isDraggable,numberOfBalls,radiusMin,radiusMax,isS
 				 x:cx, 
 				 y:cy, 
 				 text:i,
-				 textColor:textColor,
+				 textColor:config.textColor,
 				 ball: c});
 	
 	  ballset.push(c);
 	}
 };
 
+var makeGoodBall = function(quantity){
+	makeBall(quantity,
+			{color:unselectedColor,
+			 isDraggable:true,
+			 radiusMin:minLiveRadius,
+			 radiusMax:maxLiveRadius,
+			 isSpeedRandom:true,
+			 speedX:initLiveSpeedX,
+			 speedY:initLiveSpeedY,
+			 isCoordsRandom:true,
+			 text:'x',
+			 textColor:unselectedTextColor
+			});
+}
+
+var makeBadBall = function(quantity){
+	makeBall(quantity,
+			{color:obstacleColor,
+			 isDraggable:false,
+			 radiusMin:minLiveRadius,
+			 radiusMax:maxLiveRadius,
+			 isSpeedRandom:true,
+			 speedX:initLiveSpeedX,
+			 speedY:initLiveSpeedY,
+			 isCoordsRandom:true,
+			 text:'x',
+			 textColor:unselectedTextColor
+			});
+}
+
+var makeKillerBall = function(quantity,x,y){
+	makeBall(quantity,
+			{color:newColor,
+			 isDraggable:false,
+			 radiusMin:minLiveRadius,
+			 radiusMax:maxLiveRadius,
+			 isSpeedRandom:true,
+			 speedX:initLiveSpeedX,
+			 speedY:initLiveSpeedY,
+			 isCoordsRandom:false,
+			 initX:x,
+			 initY:y,
+			 text:'x',
+			 textColor:unselectedTextColor
+			});
+}
 //init
 //var background = paper.rect(x,y,width,height).attr({fill: backgroundColor});
-makeBalls(unselectedColor,true,howManyBalls,minLiveRadius,maxLiveRadius,true,initLiveSpeedX,initLiveSpeedY,true,0,0,'x',unselectedTextColor);
-makeBalls(obstacleColor,false,howManyEnemies,minLiveRadius,maxLiveRadius,true,initLiveSpeedX,initLiveSpeedY,true,0,0,'x',unselectedTextColor);
+makeGoodBall(initLiveBalls);
+makeBadBall(initEnemyBalls);
 
 var test = 0;
 var MoveBalls = function(){
@@ -133,7 +178,7 @@ var MoveBalls = function(){
 			tmpBall.ball.deflated = true;
 		}
 		else if(tmpBall.ball.deflated){
-			tmpBall.ball.attr({fill: unselectedColor});
+			tmpBall.ball.attr({fill: "r(0.65, 0.35)#fff-"+unselectedColor});
 		}
 
 		checkWalls(tmpBall);
@@ -369,14 +414,14 @@ var killBall = function(ball){
 var removeObstacleBall = function(nBall,oBall){
 	removeBall(oBall);
 	//if no more bad balls, end the game
-	if(--badBalls <= 0){
+	if(--enemyBalls <= 0){
 		showNextLevelButton();
 	}
 	else{
-		log(badBalls+" bad balls");
+		log(enemyBalls+" enemy balls");
 	}
 	//change nBall into a pBall
-	nBall.ball.attr({fill:unselectedColor});
+	nBall.ball.attr({fill:"r(0.65, 0.35)#fff-"+unselectedColor});
 	nBall.color = unselectedColor;
 	nBall.ball.draggable = true;
 	nBall.ball.drag(myMove, myDown, myUp);
@@ -393,9 +438,9 @@ var removeBall = function(ball){
 var splitBall = function(rBall){
 	rBall.released  = true;
 	rBall.dragging = false;
-	makeBalls(newColor,false,1,minLiveRadius,maxLiveRadius,true,initLiveSpeedX,initLiveSpeedY,false,rBall.attr("cx")+rBall.attr("r"),rBall.attr("cy"),'x',unselectedTextColor);
+	makeKillerBall(1,rBall.attr("cx")+rBall.attr("r"),rBall.attr("cy"));
 	currentBall = null;
-	howManyNewBalls++;
+	newBalls++;
 }
 
 var log = function(message,ball){
@@ -410,7 +455,7 @@ var log = function(message,ball){
 var showRestartButton = function(){
 	clearTimeout(gLoop);
 	ballset.hide();
-	showMessage("Game Over");
+	showMessage("You Lost!");
 	showButton("Restart", gameRestart);
 }
 
