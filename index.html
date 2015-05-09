@@ -1,12 +1,337 @@
-<html>
-  <head>
-    <title>Simple game with Raphael JS</title>
-	<meta name="viewport" content="width=device-width; initial-scale=1.0; maximum-scale=1.0; user-scalable=0;" />
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
 	<meta name="apple-mobile-web-app-capable" content="yes" />
 	<meta names="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 	
+	<script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/paper.js/0.22/paper.js"></script>
+	<script type="text/paperscript" canvas="canvas">
+		var values = {
+		    fps:1000 / 30,
+			minLiveRadius:20,
+			maxLiveRadius:10,
+			splitRadius:60,
+			initLiveSpeedX:7,
+			initLiveSpeedY:7,
+			backgroundColor:'#ff0000',
+			selectedColor:'#00ff00',
+			unselectedColor:'#ffcc00',
+			taintedColor:'#00ff00',
+			obstacleColor:'#000000',
+			hitColor:'#ffffff',
+			newColor:'#ff0000',
+			powerColor:'#0000ff',	
+			unselectedTextColor:'#000000',
+			dragok:false,
+			currentBall:null,
+			x:0,
+			y:0,
+			initLiveBalls:4,
+			initEnemyBalls:2
+		}
+		var balls = [];
+		var liveBalls = values.initLiveBalls;
+		var enemyBalls = values.initEnemyBalls;
+		var newBalls = 0;
+		var totalBalls = function(){ return liveBalls + enemyBalls + newBalls };
+		
+		var makeBall = function(quantity, config){
+			for (var i = 0; i < quantity; i++){
+			  var r = (Math.random()*config.radiusMax)+config.radiusMin;			  
+			  var vx = config.isSpeedRandom?(Math.random() * config.speedX - (config.speedX/2)):config.speedX;
+			  var vy = config.isSpeedRandom?(Math.random() * config.speedY - (config.speedY/2)):config.speedY;
+			  var center = config.isCoordsRandom?view.size * Point.random():new Point(config.initX, config.initY)
+
+			  var c = new Path.Circle(center, r);
+			  c.fillColor = config.color;
+			  
+			  if(config.isDraggable){
+			  	c.draggable = true;
+				c.released = false;
+				c.dragging = false;
+			  }
+			  
+			  balls.push({color:config.color,
+						 radius:r,
+						 oradius:r,
+						 vx:vx,
+						 vy:vy,
+						 text:i,
+						 textColor:config.textColor,
+						 ball: c});
+			}
+		};
+
+		var makeGoodBall = function(quantity){
+			makeBall(quantity,
+					{color:values.unselectedColor,
+					 isDraggable:true,
+					 radiusMin:values.minLiveRadius,
+					 radiusMax:values.maxLiveRadius,
+					 isSpeedRandom:true,
+					 speedX:values.initLiveSpeedX,
+					 speedY:values.initLiveSpeedY,
+					 isCoordsRandom:true,
+					 text:'x',
+					 textColor:values.unselectedTextColor
+					});
+		}
+
+		var makeBadBall = function(quantity){
+			makeBall(quantity,
+					{color:values.obstacleColor,
+					 isDraggable:false,
+					 radiusMin:values.minLiveRadius,
+					 radiusMax:values.maxLiveRadius,
+					 isSpeedRandom:true,
+					 speedX:values.initLiveSpeedX,
+					 speedY:values.initLiveSpeedY,
+					 isCoordsRandom:true,
+					 text:'x',
+					 textColor:values.unselectedTextColor
+					});
+		}
+
+		var makeKillerBall = function(quantity,x,y){
+			makeBall(quantity,
+					{color:values.newColor,
+					 isDraggable:false,
+					 radiusMin:values.minLiveRadius,
+					 radiusMax:values.maxLiveRadius,
+					 isSpeedRandom:true,
+					 speedX:values.initLiveSpeedX,
+					 speedY:values.initLiveSpeedY,
+					 isCoordsRandom:false,
+					 initX:x,
+					 initY:y,
+					 text:'x',
+					 textColor:values.unselectedTextColor
+					});
+		}
+	
+		makeGoodBall(values.initLiveBalls);
+		makeBadBall(values.initEnemyBalls);
+		
+		var currentBall = null;
+		var onMouseDown = function (event) {
+		    var hitResult = project.hitTest(event.point);	
+			if(hitResult && hitResult.type == "fill" && hitResult.item.draggable){
+				currentBall = hitResult.item;
+				currentBall.dragging = true;
+				currentBall.fillColor = values.selectedColor;				
+			}
+		}
+		
+		function onMouseDrag(event) {
+		    if (currentBall){
+				//console.log(event.delta.length);
+		        currentBall.position += event.delta;
+				currentBall.scale(1+event.delta.length/750)
+			}
+		}
+		
+		var onMouseUp = function (event) {
+			if(currentBall){
+				currentBall.dragging = false;
+				currentBall.released = true;
+				currentBall = null;
+			}
+		}
+		
+		var test = 0;
+		var moveBalls = function(){
+		  detectCollisions(); //detect collisions first to make changes to x and y that will translate to cx and cy
+		  for (var i = 0; i < totalBalls(); i++) {
+			var tmpBall = balls[i];
+			if(tmpBall.ball.released){
+				tmpBall.vx = Math.random()*values.initLiveSpeedX;
+				tmpBall.vy = Math.random()*values.initLiveSpeedY;	
+
+				tmpBall.ball.released = false;
+				tmpBall.ball.deflating = true;
+				test = 0;
+			
+				console.log("RELEASED", tmpBall.ball);
+			 }	  
+ 
+			 if(!tmpBall.ball.dragging){
+				if(tmpBall.ball.bounds.width/2 > tmpBall.oradius){
+					// console.log("too big!");
+					// console.log(tmpBall.ball.bounds.width/2);
+					// console.log(tmpBall.oradius);
+					tmpBall.ball.scale(.99);
+				}
+				else if(tmpBall.ball.deflating){
+					// console.log("deflating");
+					// console.log(tmpBall.ball.bounds.width/2);
+					// console.log(tmpBall.oradius);
+					tmpBall.ball.deflating = false;
+					tmpBall.ball.deflated = true;
+				}
+				else if(tmpBall.ball.deflated){
+					tmpBall.ball.fillColor = values.unselectedColor;
+				}
+
+				checkWallCollisions(tmpBall);
+
+				tmpBall.ball.position.x += tmpBall.vx;
+				tmpBall.ball.position.y += tmpBall.vy;
+
+				tmpBall.cx=tmpBall.ball.position.x;
+				tmpBall.cy=tmpBall.ball.position.y;
+			 }
+			 else{
+				if(!test){
+					test = 1;
+					console.log("GRABBED",tmpBall.ball);
+				}
+			 }
+
+			//tmpBall.radius = tmpBall.r;	 
+		  }
+		};	
+		
+		var detectCollisions = function (){
+			for(var i = 0; i < totalBalls() - 1; i++){
+				var ballA = balls[i];
+				if(ballA.isDead) continue;
+				for(var j = i + 1; j < totalBalls(); j++){
+					var ballB = balls[j];
+					if(ballB.isDead) continue;
+					if(!checkCollision(ballA, ballB))
+						return;
+				}
+			}	
+		}
+
+		var checkCollision = function (ball0, ball1){
+			var dx = ball1.ball.position.x - ball0.ball.position.x;
+			var dy = ball1.ball.position.y - ball0.ball.position.y;
+			var dist = Math.sqrt(dx*dx + dy*dy);
+			
+			if(dist < (ball0.ball.bounds.width + ball1.ball.bounds.width)/2){
+				// calculate angle, sine and cosine
+				var angle = Math.atan2(dy, dx);
+				var sin = Math.sin(angle);
+				var cos = Math.cos(angle);
+				
+				// rotate ball0's position
+				var pos0  = [0,0];
+				
+				// rotate ball1's position
+				var pos1 = rotate(dx, dy, sin, cos, true);
+				
+				// rotate ball0's velocity
+				var vel0 = rotate(ball0.vx,
+										ball0.vy,
+										sin,
+										cos,
+										true);
+
+				// rotate ball1's velocity
+				var vel1 = rotate(ball1.vx,
+										ball1.vy,
+										sin,
+										cos,
+										true);
+										
+			    // collision reaction
+				var vxTotal = vel0[0] - vel1[0];
+				vel0[0] = vel1[0];
+				vel1[0] = vxTotal + vel0[0];
+				
+				// update position
+				var absV = Math.abs(vel0[0]) + Math.abs(vel1[0]);
+				var overlap = (ball0.ball.bounds.width + ball1.ball.bounds.width)/2 
+								  - Math.abs(pos0[0] - pos1[0]);
+				pos0[0] += vel0[0] / absV * overlap;
+				pos1[0] += vel1[0] / absV * overlap;
+				
+				// rotate positions back
+				var pos0F = rotate(pos0[0],
+										  pos0[1],
+										  sin,
+										  cos,
+										  false);
+
+				var pos1F = rotate(pos1[0],
+										  pos1[1],
+										  sin,
+										  cos,
+										  false);
+										
+				// adjust positions to actual screen positions
+				ball1.ball.position.x = ball0.ball.position.x + pos1F[0];
+				ball1.ball.position.y = ball0.ball.position.y + pos1F[1];
+				ball0.ball.position.x = ball0.ball.position.x + pos0F[0];
+				ball0.ball.position.y = ball0.ball.position.y + pos0F[1];
+				
+				// rotate velocities back
+				var vel0F = rotate(vel0[0],
+									  vel0[1],
+									  sin,
+									  cos,
+									  false);
+				var vel1F = rotate(vel1[0],
+										  vel1[1],
+										  sin,
+										  cos,
+										  false);
+				ball0.vx = vel0F[0];
+				ball0.vy = vel0F[1];
+				ball1.vx = vel1F[0];
+				ball1.vy = vel1F[1];										
+			}
+			
+			return true;
+		}
+		
+		var rotate = function (x, y,	sin,	cos,	reverse){
+			var result = [0,0];
+			if(reverse){
+				result[0] = x * cos + y * sin;
+				result[1] = y * cos - x * sin;
+			}
+			else{
+				result[0] = x * cos - y * sin;
+				result[1] = y * cos + x * sin;
+			}
+			return result;
+		};
+		
+		var checkWallCollisions = function (tmpball){
+			if(tmpball.isDead) return;
+			ball = tmpball.ball;
+
+			//console.log("ball.x="+ball.x+" ball.radius="+ball.radius+" width="+width);
+			//console.log("ball.y="+ball.y+" ball.radius="+ball.radius+" height="+height);
+			if (ball.bounds.right >= view.size.width) {
+				ball.position.x = view.size.width - ball.bounds.width/2;
+				tmpball.vx *= -1
+			} 
+			else if (ball.bounds.left <= 0) {
+				ball.position.x = ball.bounds.width/2;
+				tmpball.vx *= -1;
+			} 
+
+			if (ball.bounds.bottom >= view.size.height) {
+				ball.position.y = view.size.height - ball.bounds.width/2;
+				tmpball.vy *= -1;
+			} 
+			else if (ball.bounds.top <= 0) {
+				ball.position.y = ball.bounds.width/2;
+				tmpball.vy *= -1;
+			}	
+		}
+
+		var onFrame = function (event) {
+			moveBalls();
+		}
+	</script>
 	<style>
-		#c {
+		#canvas {
 			background-color: #ff0000;
 		}
 		html, body { 
@@ -17,14 +342,6 @@
 	</style>
 </head>
 <body>
-    <div id="c" style="width:320px;height:362px" ></div>
-	<script src="raphael-min.1.5.2.js"></script>
-	<script src="game.js"></script>
-	<script>
-	// Catch touchevents on dont_scroll-objects
-	document.getElementById("c").ontouchmove = function(event) {
-	   event.preventDefault();
-	}
-	</script>
+	<canvas id="canvas" resize></canvas>
 </body>
 </html>
